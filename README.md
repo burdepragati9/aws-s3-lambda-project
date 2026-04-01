@@ -29,3 +29,74 @@ It automatically processes files uploaded to Amazon S3 using AWS Lambda and send
 ---
 
 ## 📂 Project Structure
+
+aws-s3-lambda-project/
+│
+├── lambda_function.py # Main Lambda logic
+├── README.md # Project documentation
+
+
+---
+
+## ⚙️ Setup Instructions
+
+### 1️⃣ Create S3 Buckets
+- Create two buckets:
+  - Source Bucket
+  - Destination Bucket
+
+---
+
+### 2️⃣ Create SNS Topic
+- Create a topic
+- Add email subscriptions
+- Confirm emails
+
+---
+
+### 3️⃣ Create Lambda Function
+- Runtime: Python 3.x
+- Add S3 trigger (source bucket)
+
+---
+
+### 4️⃣ Attach Permissions
+Attach these policies to Lambda role:
+- AmazonS3FullAccess
+- AmazonSNSFullAccess
+
+---
+
+### 5️⃣ Add Lambda Code
+
+```python
+import boto3
+
+s3 = boto3.client('s3')
+sns = boto3.client('sns')
+
+DEST_BUCKET = 'your-destination-bucket'
+TOPIC_ARN = 'your-sns-topic-arn'
+
+def lambda_handler(event, context):
+
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+
+    response = s3.head_object(Bucket=bucket, Key=key)
+    size = response['ContentLength']
+
+    s3.copy_object(
+        Bucket=DEST_BUCKET,
+        CopySource={'Bucket': bucket, 'Key': key},
+        Key=key
+    )
+
+    if size < 1048576:
+        sns.publish(
+            TopicArn=TOPIC_ARN,
+            Message=f"{key} is less than 1MB",
+            Subject="File Alert"
+        )
+
+    return "Success"
